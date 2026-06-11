@@ -383,7 +383,7 @@ input::placeholder{color:var(--text-3);}
       <div class="panel-header"><span class="panel-title">Vendors</span></div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Vendor</th><th>Category</th><th>Contact</th><th>Contract (₦)</th><th>Deposited (₦)</th><th>Balance (₦)</th><th>Status</th><th>Notes</th><th>Added by</th></tr></thead>
+          <thead><tr><th>Vendor</th><th>Category</th><th>Contact</th><th>Contract (₦)</th><th>Paid (₦)</th><th>Balance (₦)</th><th>Status</th><th>Notes</th><th>Added by</th></tr></thead>
           <tbody id="vendor-body"><tr><td colspan="9" class="empty-row">Loading…</td></tr></tbody>
         </table>
       </div>
@@ -758,14 +758,20 @@ function setExpFilter(c){ expFilter=c; renderExpenses(); }
 
 function editExpense(id){
   const e=window._data.expenses.find(x=>x.id===id); if(!e) return;
+  const vendor=e.vendor_id ? window._data.vendors.find(v=>v.id===e.vendor_id) : null;
+  const syncNote=vendor
+    ? `<div style="background:var(--amber-bg);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--amber);margin-bottom:14px;">
+        Linked to vendor <strong>${vendor.name}</strong> — updating the amount paid or status here will automatically update their record too.
+      </div>` : '';
   openModal('Edit expense',`
+    ${syncNote}
     <div class="modal-field"><label>Item name</label><input type="text" id="me-item" value="${esc(e.item)}"></div>
     <div class="modal-grid">
       <div class="modal-field"><label>Category</label><select id="me-cat">${selOpts(EXP_CATS,e.category)}</select></div>
       <div class="modal-field"><label>Status</label><select id="me-status">${selOpts(EXP_STAT,e.status)}</select></div>
       <div class="modal-field"><label>Budget (₦)</label><input type="number" id="me-budget" value="${e.budget||0}"></div>
       <div class="modal-field"><label>Amount paid (₦)</label><input type="number" id="me-paid" value="${e.paid||0}"></div>
-      <div class="modal-field"><label>Vendor</label><input type="text" id="me-vendor" value="${esc(e.vendor||'')}"></div>
+      <div class="modal-field"><label>Vendor</label><input type="text" id="me-vendor" value="${esc(e.vendor||'')}"${vendor?' readonly style="opacity:0.6;"':''}></div>
       <div class="modal-field"><label>Due date</label><input type="date" id="me-due" value="${e.due_date||''}"></div>
     </div>
     <div class="modal-actions">
@@ -788,12 +794,32 @@ async function saveExpense(id){
   setSyncStatus('saving','Saving…');
   const {error}=await sb.from('wedding_expenses').update(payload).eq('id',id);
   if(error){ setSyncStatus('error','Save failed'); return; }
+
+  // if this expense is linked to a vendor, sync the payment back to the vendor
+  if(orig.vendor_id){
+    const vendorUpdate={
+      deposited: payload.paid,
+      contract_value: payload.budget,
+      status: expToVendorStatus(payload.status),
+    };
+    const {error:vErr}=await sb.from('wedding_vendors').update(vendorUpdate).eq('id',orig.vendor_id);
+    if(vErr){ setSyncStatus('error','Vendor sync failed'); return; }
+  }
+
   const changes=[];
   if(orig.status!==payload.status) changes.push(`status → ${payload.status}`);
   if(orig.paid!==payload.paid) changes.push(`paid ${fmt(orig.paid)} → ${fmt(payload.paid)}`);
   if(orig.budget!==payload.budget) changes.push(`budget → ${fmt(payload.budget)}`);
+  if(orig.vendor_id) changes.push(`vendor updated`);
   await log('edited','expenses',`Edited expense "${payload.item}"${changes.length?' ('+changes.join(', ')+')':''}`);
   closeModal(); loadAll();
+}
+
+// map expense status → vendor status
+function expToVendorStatus(es){
+  if(es==='paid')         return 'fully-paid';
+  if(es==='downpayment')  return 'deposit-paid';
+  return 'negotiating';
 }
 async function addExpense(){
   const item=document.getElementById('exp-item').value.trim();
@@ -1012,7 +1038,7 @@ function editVendor(id){
       <div class="modal-field"><label>Category</label><select id="mv-cat">${selOpts(VEN_CATS,v.category)}</select></div>
       <div class="modal-field"><label>Status</label><select id="mv-status">${selOpts(VEN_STAT,v.status)}</select></div>
       <div class="modal-field"><label>Contract value (₦)</label><input type="number" id="mv-contract" value="${v.contract_value||0}"></div>
-      <div class="modal-field"><label>Amount deposited (₦)</label><input type="number" id="mv-deposit" value="${v.deposited||0}"></div>
+      <div class="modal-field"><label>Amount paid (₦)</label><input type="number" id="mv-deposit" value="${v.deposited||0}"></div>
       <div class="modal-field"><label>Contact</label><input type="text" id="mv-contact" value="${esc(v.contact||'')}"></div>
     </div>
     <div class="modal-field"><label>Notes</label><input type="text" id="mv-notes" value="${esc(v.notes||'')}"></div>
