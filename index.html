@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#11DaysLoveStory — Wedding Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F8F6F2;--surface:#FFFFFF;--surface2:#F2EFE9;--surface3:#E8E4DC;
+  --border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.15);
+  --text:#18160F;--text2:#6A6455;--text3:#9D9888;
+  --green:#1A8F68;--green-bg:#E2F5EE;
+  --amber:#B06C10;--amber-bg:#FAEBD6;
+  --red:#9B2626;--red-bg:#FBEBEB;
+  --blue:#1A5CA8;--blue-bg:#E4EEF9;
+  --gold:#C9A55A;--gold-deep:#7A5C1E;
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.brand-ring{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:13px;color:var(--gold-deep);}
+.brand-name{font-size:14px;font-weight:500;}
+.brand-tag{font-size:11px;color:var(--text3);}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.sync-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;border:1px solid var(--border-strong);font-size:11px;color:var(--text2);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.busy{background:var(--amber);animation:pulse .8s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.user-badge{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:99px;border:1px solid var(--border-strong);font-size:12px;color:var(--text2);cursor:pointer;background:var(--surface);}
+.user-badge:hover{background:var(--surface2);}
+.uav{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;}
+
+/* ── LAYOUT ── */
+.page{max-width:1200px;margin:0 auto;padding:20px 20px 40px;}
+
+/* ── HERO STATS ── */
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;}
+.hcard.accent{background:var(--text);color:#fff;}
+.hcard-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px;}
+.hcard.accent .hcard-label{color:rgba(255,255,255,.6);}
+.hcard-val{font-size:22px;font-weight:500;line-height:1.1;}
+.hcard-val.g{color:var(--green);}
+.hcard-val.a{color:var(--amber);}
+.hcard-val.r{color:var(--red);}
+.hcard.accent .hcard-val{color:#fff;}
+.hcard-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.hcard.accent .hcard-sub{color:rgba(255,255,255,.5);}
+
+/* ── WEDDING INFO ── */
+.info-item{display:flex;flex-direction:column;gap:3px;min-width:120px;}
+.info-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}
+.info-val{font-size:15px;font-weight:500;color:var(--text);}
+.info-sub{font-size:12px;color:var(--gold-deep);font-weight:500;}
+
+/* ── PROGRESS ── */
+.progress-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;margin-bottom:20px;}
+.progress-head{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px;}
+.progress-track{height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;transition:width .5s,background .5s;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--r);padding:3px;margin-bottom:16px;overflow-x:auto;width:fit-content;max-width:100%;}
+.tab-btn{padding:7px 16px;border-radius:8px;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s;}
+.tab-btn.active{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ── PANEL ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px;}
+.panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.panel-title{font-size:14px;font-weight:500;}
+.panel-meta{font-size:12px;color:var(--text3);}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{padding:3px 11px;border-radius:99px;font-size:12px;border:1px solid var(--border-strong);cursor:pointer;color:var(--text2);background:transparent;font-family:'DM Sans',sans-serif;}
+.chip.on{background:var(--text);color:#fff;border-color:var(--text);}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:500;color:var(--text3);padding:9px 16px;border-bottom:1px solid var(--border);text-align:left;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.row-click{cursor:pointer;}
+tr.row-click:hover td{background:var(--bg);}
+.tap-hint{font-size:11px;color:var(--text3);padding:7px 16px;text-align:right;border-top:1px solid var(--border);}
+.empty-state{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:500;white-space:nowrap;}
+.b-green{background:var(--green-bg);color:var(--green);}
+.b-amber{background:var(--amber-bg);color:var(--amber);}
+.b-red{background:var(--red-bg);color:var(--red);}
+.b-blue{background:var(--blue-bg);color:var(--blue);}
+.b-gray{background:var(--surface2);color:var(--text2);}
+.by-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);}
+.by-av{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:#fff;}
+
+/* ── ADD FORM ── */
+.add-form{padding:14px 18px;border-top:1px solid var(--border);background:var(--bg);}
+.add-form-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:11px;color:var(--text3);}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+input::placeholder{color:var(--text3);}
+.btn{padding:8px 16px;border-radius:var(--r);border:1px solid var(--border-strong);background:var(--text);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;}
+.btn:hover{opacity:.88;}
+.btn-ghost{background:transparent;color:var(--text2);}
+.btn-ghost:hover{background:var(--surface2);opacity:1;}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff;}
+
+/* ── OVERVIEW GRID ── */
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ov-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;}
+.ov-card h4{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.ov-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);}
+.ov-row:last-child{border:none;}
+.ov-label{color:var(--text2);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;}
+.modal-bar{width:36px;height:4px;background:var(--border-strong);border-radius:99px;margin:12px auto 0;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;}
+.modal-head h3{font-size:15px;font-weight:500;}
+.modal-x{background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1;padding:0 4px;}
+.modal-body{padding:0 20px 24px;}
+.mf{margin-bottom:13px;}
+.mf label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.mf input,.mf select,.mf textarea{width:100%;}
+.mf textarea{min-height:65px;resize:vertical;}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+.modal-actions .btn{flex:1;}
+
+/* ── CONFIRM ── */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:center;justify-content:center;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:var(--surface);border-radius:var(--rl);padding:26px 22px;width:300px;max-width:90vw;text-align:center;}
+.confirm-box h4{font-size:15px;font-weight:500;margin-bottom:8px;}
+.confirm-box p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+.confirm-btns{display:flex;gap:8px;}
+.confirm-btns .btn{flex:1;}
+
+/* ── WHO OVERLAY ── */
+.who-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:none;align-items:center;justify-content:center;}
+.who-overlay.open{display:flex;}
+.who-box{background:var(--surface);border-radius:var(--rl);padding:32px;width:340px;max-width:92vw;}
+.who-box h2{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:8px;}
+.who-box p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.who-list{display:flex;flex-direction:column;gap:10px;}
+.who-btn{padding:14px;border-radius:var(--r);border:1px solid var(--border-strong);background:var(--surface);cursor:pointer;display:flex;align-items:center;gap:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);transition:background .15s;}
+.who-btn:hover{background:var(--surface2);}
+.who-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0;}
+
+/* ── ACTIVITY ── */
+.act-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.act-item:last-child{border:none;}
+.act-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;margin-top:1px;}
+.act-text{font-size:13px;line-height:1.5;}
+.act-text strong{font-weight:500;}
+.act-time{font-size:11px;color:var(--text3);margin-top:2px;}
+.act-tbl{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--surface2);color:var(--text2);margin-left:6px;}
+
+/* ── LOADING ── */
+.loader{display:flex;align-items:center;justify-content:center;padding:50px;gap:10px;color:var(--text3);}
+.spin{width:18px;height:18px;border:2px solid var(--border-strong);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:660px){
+  .topbar{padding:0 14px;}
+  .page{padding:14px 14px 40px;}
+  .hero,.ov-grid{grid-template-columns:1fr 1fr;}
+  .mgrid{grid-template-columns:1fr;}
+  .brand-tag{display:none;}
+}
+@media(max-width:420px){
+  .hero{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- WHO ARE YOU -->
+<div class="who-overlay" id="who-overlay">
+  <div class="who-box">
+    <h2>Who's signing in?</h2>
+    <p>Your name will be attached to every entry you make. You only need to do this once on this device.</p>
+    <div class="who-list">
+      <button class="who-btn" onclick="setUser('Kelechi','#1A5CA8')">
+        <div class="who-av" style="background:#1A5CA8;">K</div>
+        <span>Kelechi</span>
+      </button>
+      <button class="who-btn" onclick="setUser('Nengi','#8B3A7E')">
+        <div class="who-av" style="background:#8B3A7E;">N</div>
+        <span>Nengi</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-bar"></div>
+    <div class="modal-head">
+      <h3 id="modal-title">Edit</h3>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h4>Delete this entry?</h4>
+    <p id="confirm-msg">It will be removed from the list but remain in the activity log.</p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-ring">♥</div>
+    <div>
+      <div class="brand-name">#11DaysLoveStory</div>
+      <div class="brand-tag" id="topbar-tag">Wedding tracker</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="user-badge" id="user-badge" style="display:none" onclick="switchUser()">
+      <div class="uav" id="uav-top"></div>
+      <span id="uname-top"></span>
+    </div>
+    <div class="sync-badge">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-text">Connecting…</span>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hcard"><div class="hcard-label">Cash gifts received</div><div class="hcard-val g" id="h-gifts">₦0</div><div class="hcard-sub" id="h-gifts-sub"></div></div>
+    <div class="hcard"><div class="hcard-label">Total paid out</div><div class="hcard-val" id="h-paid">₦0</div><div class="hcard-sub" id="h-paid-sub"></div></div>
+    <div class="hcard"><div class="hcard-label">Personal contributions</div><div class="hcard-val g" id="h-contrib">₦0</div><div class="hcard-sub" id="h-contrib-sub"></div></div>
+    <div class="hcard accent"><div class="hcard-label">Cash on hand</div><div class="hcard-val" id="h-cash">₦0</div><div class="hcard-sub" id="h-cash-sub"></div></div>
+    <div class="hcard"><div class="hcard-label">Still owed to vendors</div><div class="hcard-val a" id="h-owed">₦0</div><div class="hcard-sub" id="h-owed-sub"></div></div>
+    <div class="hcard"><div class="hcard-label">Budget goal</div><div class="hcard-val">₦20,000,000</div><div class="hcard-sub" id="h-budget-sub"></div></div>
+    <div class="hcard"><div class="hcard-label">Days to wedding</div><div class="hcard-val" id="h-days">—</div><div class="hcard-sub" id="h-days-sub"></div></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-head"><span>Budget utilisation</span><span id="prog-label">₦0 of ₦20,000,000 (0%)</span></div>
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" data-tab="vendors" onclick="switchTab('vendors',this)">Vendors</button>
+    <button class="tab-btn" data-tab="expenses" onclick="switchTab('expenses',this)">Expenses</button>
+    <button class="tab-btn" data-tab="gifts" onclick="switchTab('gifts',this)">Gifts</button>
+    <button class="tab-btn" data-tab="contributions" onclick="switchTab('contributions',this)">Personal contributions</button>
+    <button class="tab-btn" data-tab="activity" onclick="switchTab('activity',this)">Activity log</button>
+    <button class="tab-btn" data-tab="details" onclick="switchTab('details',this)">Wedding details</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="ov-grid" id="ov-content"><div class="loader"><div class="spin"></div>Loading…</div></div>
+  </div>
+
+  <!-- VENDORS -->
+  <div class="tab-panel" id="tab-vendors">
+    <div class="panel">
+      <div class="panel-head"><span class="panel-title">Vendors</span><span class="panel-meta" id="vendors-meta"></span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Vendor</th><th>Category</th><th>Status</th><th>Quote (₦)</th><th>Paid (₦)</th><th>Outstanding (₦)</th><th>Added by</th></tr></thead>
+          <tbody id="vendors-body"></tbody>
+        </table>
+      </div>
+      <div class="tap-hint">Tap any row to edit</div>
+      <div class="add-form">
+        <div class="add-form-label">Add vendor</div>
+        <div class="form-row">
+          <div class="fg"><label>Vendor name</label><input id="v-name" type="text" placeholder="e.g. Sublime Events" style="min-width:140px;"></div>
+          <div class="fg"><label>Category</label><select id="v-cat"></select></div>
+          <div class="fg"><label>Status</label><select id="v-status"></select></div>
+          <div class="fg"><label>Quote (₦)</label><input id="v-quote" type="number" placeholder="0" style="width:130px;"></div>
+          <div class="fg"><label>Contact</label><input id="v-contact" type="text" placeholder="Phone / Email" style="min-width:130px;"></div>
+          <div class="fg"><label>Notes</label><input id="v-notes" type="text" placeholder="Optional" style="min-width:120px;"></div>
+          <div class="fg"><label>&nbsp;</label><button class="btn" onclick="addVendor()">+ Add</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div class="tab-panel" id="tab-expenses">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Expenses</span>
+        <div class="filter-row" id="exp-filters"></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Description</th><th>Category</th><th>Vendor</th><th>Amount (₦)</th><th>Payment method</th><th>Date</th><th>Added by</th></tr></thead>
+          <tbody id="expenses-body"></tbody>
+        </table>
+      </div>
+      <div class="tap-hint">Tap any row to edit</div>
+      <div class="add-form">
+        <div class="add-form-label">Add expense</div>
+        <div class="form-row">
+          <div class="fg"><label>Description</label><input id="e-desc" type="text" placeholder="e.g. Venue deposit" style="min-width:150px;"></div>
+          <div class="fg"><label>Category</label><select id="e-cat"></select></div>
+          <div class="fg"><label>Vendor</label><select id="e-vendor"></select></div>
+          <div class="fg"><label>Amount (₦)</label><input id="e-amount" type="number" placeholder="0" style="width:130px;"></div>
+          <div class="fg"><label>Payment method</label><select id="e-method"></select></div>
+          <div class="fg"><label>Date</label><input id="e-date" type="date"></div>
+          <div class="fg"><label>&nbsp;</label><button class="btn" onclick="addExpense()">+ Add</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIFTS -->
+  <div class="tab-panel" id="tab-gifts">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Monetary gifts</span>
+        <span class="panel-meta" id="gifts-meta"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Relationship</th><th>Amount (₦)</th><th>Received by</th><th>Date</th><th>Channel</th><th>Acknowledged</th><th>Logged by</th></tr></thead>
+          <tbody id="gifts-body"></tbody>
+        </table>
+      </div>
+      <div class="tap-hint">Tap any row to edit</div>
+      <div class="add-form">
+        <div class="add-form-label">Log a gift</div>
+        <div class="form-row">
+          <div class="fg"><label>Name</label><input id="g-name" type="text" placeholder="Donor name" style="min-width:130px;"></div>
+          <div class="fg"><label>Relationship</label><select id="g-rel"></select></div>
+          <div class="fg"><label>Amount (₦)</label><input id="g-amount" type="number" placeholder="0" style="width:130px;"></div>
+          <div class="fg"><label>Received by</label><select id="g-recv"><option>Kelechi</option><option>Nengi</option></select></div>
+          <div class="fg"><label>Date</label><input id="g-date" type="date"></div>
+          <div class="fg"><label>Channel</label><select id="g-channel"></select></div>
+          <div class="fg"><label>Acknowledged</label><select id="g-ack"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          <div class="fg"><label>&nbsp;</label><button class="btn" onclick="addGift()">+ Add</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTRIBUTIONS -->
+  <div class="tab-panel" id="tab-contributions">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Personal contributions</span>
+        <span class="panel-meta" id="contrib-meta"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Notes</th><th>From</th><th>Amount (₦)</th><th>Date</th><th>Logged by</th></tr></thead>
+          <tbody id="contrib-body"></tbody>
+        </table>
+      </div>
+      <div class="tap-hint">Tap any row to edit</div>
+      <div class="add-form">
+        <div class="add-form-label">Log a personal contribution</div>
+        <div class="form-row">
+          <div class="fg"><label>Notes</label><input id="c-notes" type="text" placeholder="e.g. March salary savings" style="min-width:180px;"></div>
+          <div class="fg"><label>From</label><select id="c-from"><option>Kelechi</option><option>Nengi</option></select></div>
+          <div class="fg"><label>Amount (₦)</label><input id="c-amount" type="number" placeholder="0" style="width:130px;"></div>
+          <div class="fg"><label>Date</label><input id="c-date" type="date"></div>
+          <div class="fg"><label>&nbsp;</label><button class="btn" onclick="addContribution()">+ Add</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY -->
+  <div class="tab-panel" id="tab-activity">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Activity log</span>
+        <div class="filter-row" id="act-filters"></div>
+      </div>
+      <div id="act-content" style="padding:0 18px;"></div>
+    </div>
+  </div>
+  <!-- DETAILS -->
+  <div class="tab-panel" id="tab-details">
+    <div class="panel">
+      <div class="panel-head"><span class="panel-title">Wedding details</span></div>
+      <div id="wedding-info-display" style="padding:16px 18px;display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <div id="info-empty" style="font-size:13px;color:var(--text3);">No details saved yet. Fill in the form below.</div>
+      </div>
+      <div class="add-form">
+        <div class="add-form-label">Edit details</div>
+        <div class="form-row">
+          <div class="fg"><label>Wedding date</label><input id="wi-date" type="date"></div>
+          <div class="fg"><label>Venue</label><input id="wi-venue" type="text" placeholder="e.g. The Wheatbaker" style="min-width:160px;"></div>
+          <div class="fg"><label>Guest count</label><input id="wi-guests" type="number" placeholder="e.g. 250" style="width:110px;"></div>
+          <div class="fg"><label>Theme / colours</label><input id="wi-theme" type="text" placeholder="e.g. Gold & Ivory" style="min-width:140px;"></div>
+          <div class="fg"><label>&nbsp;</label><button class="btn" onclick="saveWeddingInfo()">Save</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+// ─────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────
+const SB_URL = 'https://elmktddodknjmlkwxzvd.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbWt0ZGRvZGtuam1sa3d4enZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQ0NTAsImV4cCI6MjA5MzU3MDQ1MH0.WaKPnWGB1xGDMrcYcVzJSs5ve6Two5EmSmuxnYNphWo';
+const BUDGET  = 20000000;
+
+const USERS = {
+  Kelechi: { color:'#1A5CA8', initial:'K' },
+  Nengi:   { color:'#8B3A7E', initial:'N' },
+};
+
+const CATS = ['Catering','Fashion','Decor','Event Management','Photography','Videography','Music & Entertainment','Transport','Stationery','Rings & Jewellery','Beauty & Hair','Honeymoon','Logistics','Miscellaneous'];
+const VENDOR_STATUSES = ['Negotiating','Contacted','Contracted','Deposit paid','Fully paid','Confirmed'];
+const RELATIONSHIPS = ['Family','Friend','Church','Community','Colleague','Other'];
+const CHANNELS = ['Cash','Bank transfer','POS','Other'];
+const METHODS  = ['Cash','Bank transfer','POS','Other'];
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let sb;
+let currentUser = localStorage.getItem('wb_user') || null;
+let D = { vendors:[], expenses:[], gifts:[], contributions:[], activity:[] };
+let activeTab = 'overview';
+let expCatFilter = 'All';
+let actUserFilter = 'All';
+let confirmCb = null;
+
+// ─────────────────────────────────────────
+// POPULATE SELECTS
+// ─────────────────────────────────────────
+function populateSelects(){
+  sel('v-cat',   CATS);
+  sel('v-status',VENDOR_STATUSES);
+  sel('e-cat',   CATS);
+  sel('e-method',METHODS);
+  sel('g-rel',   RELATIONSHIPS);
+  sel('g-channel',CHANNELS);
+}
+function sel(id, opts){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = opts.map(o=>`<option>${o}</option>`).join('');
+}
+function vendorSelect(elId, selectedId){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML = D.vendors.length
+    ? D.vendors.map(v=>`<option value="${v.id}"${v.id===selectedId?' selected':''}>${v.name}</option>`).join('')
+    : '<option value="">— No vendors yet —</option>';
+}
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+const N   = s => parseFloat((s||'').toString().replace(/,/g,''))||0;
+const fmt = n => '₦'+Math.round(n||0).toLocaleString('en-NG');
+const fmtN= n => Math.round(n||0).toLocaleString('en-NG');
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const today = () => new Date().toISOString().slice(0,10);
+
+function uColor(name){ return (USERS[name]||{color:'#666'}).color; }
+function uInit(name){ return (USERS[name]||{initial:'?'}).initial; }
+function byPill(name){
+  if(!name) return '<span style="color:var(--text3);font-size:11px;">—</span>';
+  return `<span class="by-pill"><span class="by-av" style="background:${uColor(name)};">${uInit(name)}</span>${name}</span>`;
+}
+function statusBadge(s){
+  const map = {
+    'Negotiating':'b-gray','Contacted':'b-gray','Contracted':'b-blue',
+    'Deposit paid':'b-amber','Fully paid':'b-green','Confirmed':'b-green'
+  };
+  return `<span class="badge ${map[s]||'b-gray'}">${s||'—'}</span>`;
+}
+function ackBadge(v){ return v==='yes'?'<span class="badge b-green">Yes</span>':'<span class="badge b-gray">No</span>'; }
+function timeAgo(ts){
+  const d=Math.floor((Date.now()-new Date(ts))/1000);
+  if(d<60) return 'just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+function fmtDate(ts){ return new Date(ts).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function selOpts(arr, val){
+  return arr.map(o=>`<option${o===val?' selected':''}>${esc(o)}</option>`).join('');
+}
+
+// ─────────────────────────────────────────
+// SUPABASE + REALTIME
+// ─────────────────────────────────────────
+function boot(){
+  populateSelects();
+  renderWeddingInfo();
+  sb = supabase.createClient(SB_URL, SB_KEY);
+  setSyncStatus('busy','Connecting…');
+
+  if(!currentUser){
+    document.getElementById('who-overlay').classList.add('open');
+  } else {
+    showUserBadge(currentUser);
+    loadAll();
+    subscribeRealtime();
+  }
+}
+
+function subscribeRealtime(){
+  const tables = ['wt_vendors','wt_expenses','wt_gifts','wt_contributions','wt_activity'];
+  const ch = sb.channel('wt-realtime');
+  tables.forEach(t => ch.on('postgres_changes',{event:'*',schema:'public',table:t},()=>loadAll()));
+  ch.subscribe();
+}
+
+// ─────────────────────────────────────────
+// LOAD
+// ─────────────────────────────────────────
+async function loadAll(){
+  try {
+    const [v,e,g,c,a] = await Promise.all([
+      sb.from('wt_vendors').select('*').order('created_at'),
+      sb.from('wt_expenses').select('*').order('created_at'),
+      sb.from('wt_gifts').select('*').order('amount',{ascending:false}),
+      sb.from('wt_contributions').select('*').order('created_at'),
+      sb.from('wt_activity').select('*').order('created_at',{ascending:false}).limit(300),
+    ]);
+    D = {
+      vendors:      v.data||[],
+      expenses:     e.data||[],
+      gifts:        g.data||[],
+      contributions:c.data||[],
+      activity:     a.data||[],
+    };
+    renderAll();
+    setSyncStatus('ok','Synced · '+new Date().toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'}));
+  } catch(err){
+    setSyncStatus('err','Sync error');
+  }
+}
+
+// ─────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────
+function renderAll(){
+  renderHero();
+  renderTab(activeTab);
+}
+
+// ─────────────────────────────────────────
+// HERO
+// ─────────────────────────────────────────
+function renderHero(){
+  const totalGifts   = D.gifts.reduce((a,g)=>a+(g.amount||0),0);
+  const totalContrib = D.contributions.reduce((a,c)=>a+(c.amount||0),0);
+  const totalPaid    = D.expenses.reduce((a,e)=>a+(e.amount||0),0);
+  const cashOnHand   = totalGifts + totalContrib - totalPaid;
+  const totalQuoted  = D.vendors.reduce((a,v)=>a+(v.quote||0),0);
+  const vendorPaid   = D.vendors.reduce((a,v)=>a+(v.paid||0),0);
+  const stillOwed    = Math.max(0, totalQuoted - vendorPaid);
+  const pct          = BUDGET>0 ? Math.min(100,Math.round((totalPaid/BUDGET)*100)) : 0;
+
+  // contrib card
+  document.getElementById('h-contrib').textContent = fmt(totalContrib);
+  document.getElementById('h-contrib-sub').textContent = D.contributions.length+' entr'+(D.contributions.length!==1?'ies':'y');
+
+  // hero cards
+  document.getElementById('h-gifts').textContent = fmt(totalGifts);
+  document.getElementById('h-gifts-sub').textContent = D.gifts.length+' donor'+(D.gifts.length!==1?'s':'');
+  document.getElementById('h-paid').textContent = fmt(totalPaid);
+  document.getElementById('h-paid-sub').textContent = D.expenses.length+' expense'+(D.expenses.length!==1?'s':'');
+  const cashEl = document.getElementById('h-cash');
+  cashEl.textContent = fmt(cashOnHand);
+  cashEl.className = 'hcard-val';
+  document.getElementById('h-cash-sub').textContent = cashOnHand<0?'Shortfall':'Available to spend';
+  document.getElementById('h-owed').textContent = fmt(stillOwed);
+  document.getElementById('h-owed-sub').textContent = D.vendors.filter(v=>(v.quote||0)>(v.paid||0)).length+' vendor'+(D.vendors.filter(v=>(v.quote||0)>(v.paid||0)).length!==1?'s':'')+' outstanding';
+
+  // progress
+  const fill = document.getElementById('prog-fill');
+  fill.style.width = pct+'%';
+  fill.style.background = pct>90?'#9B2626':pct>70?'#B06C10':'#1A8F68';
+  document.getElementById('prog-label').textContent = `${fmt(totalPaid)} paid of ₦20,000,000 budget (${pct}%)`;
+  document.getElementById('h-budget-sub').textContent = pct+'% utilised';
+
+  // days
+  const wedding = localStorage.getItem('wb_wedding_date');
+  if(wedding){
+    const days = Math.ceil((new Date(wedding)-new Date())/86400000);
+    document.getElementById('h-days').textContent = days>0?days:'Today! 🎊';
+    document.getElementById('h-days').className = 'hcard-val'+(days<60?' a':'');
+    document.getElementById('h-days-sub').textContent = days>0?'days away':'';
+    document.getElementById('topbar-tag').textContent = days>0?days+' days to go':'Wedding day!';
+  }
+}
+
+// ─────────────────────────────────────────
+// TAB
+// ─────────────────────────────────────────
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  activeTab = id;
+  renderTab(id);
+}
+function renderTab(id){
+  if(id==='overview')      renderOverview();
+  else if(id==='vendors')  renderVendors();
+  else if(id==='expenses') renderExpenses();
+  else if(id==='gifts')    renderGifts();
+  else if(id==='contributions') renderContributions();
+  else if(id==='activity') renderActivity();
+  else if(id==='details')  renderWeddingInfo();
+}
+
+// ─────────────────────────────────────────
+// OVERVIEW
+// ─────────────────────────────────────────
+function renderOverview(){
+  const totalGifts  = D.gifts.reduce((a,g)=>a+(g.amount||0),0);
+  const notAck      = D.gifts.filter(g=>g.acknowledged!=='yes').length;
+  const totalPaid   = D.expenses.reduce((a,e)=>a+(e.amount||0),0);
+  const totalContrib= D.contributions.reduce((a,c)=>a+(c.amount||0),0);
+  const cashOnHand  = totalGifts+totalContrib-totalPaid;
+
+  // vendor status breakdown
+  const vByStatus = {};
+  VENDOR_STATUSES.forEach(s=>vByStatus[s]=0);
+  D.vendors.forEach(v=>{ if(vByStatus[v.status]!==undefined) vByStatus[v.status]++; });
+
+  // spend by category
+  const byCat = {};
+  D.expenses.forEach(e=>{ byCat[e.category]=(byCat[e.category]||0)+(e.amount||0); });
+  const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1])
+    .map(([c,v])=>`<div class="ov-row"><span class="ov-label">${c}</span><span>${fmt(v)}</span></div>`).join('');
+
+  const recent = D.activity.slice(0,6).map(a=>`
+    <div class="ov-row" style="gap:8px;flex-wrap:wrap;">
+      <span class="by-pill"><span class="by-av" style="background:${uColor(a.actor)};">${uInit(a.actor)}</span><strong>${a.actor}</strong></span>
+      <span style="font-size:12px;color:var(--text3);">${a.description.length>45?a.description.slice(0,45)+'…':a.description} · ${timeAgo(a.created_at)}</span>
+    </div>`).join('');
+
+  document.getElementById('ov-content').innerHTML = `
+    <div class="ov-card"><h4>Cash position</h4>
+      <div class="ov-row"><span class="ov-label">Gifts received</span><span style="color:var(--green);font-weight:500;">${fmt(totalGifts)}</span></div>
+      <div class="ov-row"><span class="ov-label">Personal contributions</span><span style="color:var(--green);">${fmt(totalContrib)}</span></div>
+      <div class="ov-row"><span class="ov-label">Total paid out</span><span style="color:var(--red);">−${fmt(totalPaid)}</span></div>
+      <div class="ov-row"><span class="ov-label" style="font-weight:500;">Cash on hand</span><span style="font-weight:500;color:${cashOnHand<0?'var(--red)':'var(--green)'};">${fmt(cashOnHand)}</span></div>
+    </div>
+    <div class="ov-card"><h4>Vendor snapshot</h4>
+      ${VENDOR_STATUSES.filter(s=>vByStatus[s]>0).map(s=>`<div class="ov-row"><span class="ov-label">${statusBadge(s)}</span><span>${vByStatus[s]} vendor${vByStatus[s]!==1?'s':''}</span></div>`).join('')||'<p style="color:var(--text3);font-size:13px;">No vendors yet</p>'}
+    </div>
+    <div class="ov-card"><h4>Spend by category</h4>
+      ${catRows||'<p style="color:var(--text3);font-size:13px;">No expenses yet</p>'}
+    </div>
+    <div class="ov-card"><h4>Gifts snapshot</h4>
+      <div class="ov-row"><span class="ov-label">Total received</span><span style="color:var(--green);font-weight:500;">${fmt(totalGifts)}</span></div>
+      <div class="ov-row"><span class="ov-label">Number of donors</span><span>${D.gifts.length}</span></div>
+      <div class="ov-row"><span class="ov-label">Not yet acknowledged</span><span style="color:${notAck>0?'var(--amber)':'var(--green)'};">${notAck}</span></div>
+    </div>
+    <div class="ov-card" style="grid-column:1/-1;"><h4>Recent activity</h4>
+      ${recent||'<p style="color:var(--text3);font-size:13px;">No activity yet</p>'}
+    </div>`;
+}
+
+// ─────────────────────────────────────────
+// VENDORS
+// ─────────────────────────────────────────
+function vendorPaidAmount(vendorId){
+  return D.expenses.filter(e=>e.vendor_id===vendorId).reduce((a,e)=>a+(e.amount||0),0);
+}
+
+function renderVendors(){
+  const totalQ = D.vendors.reduce((a,v)=>a+(v.quote||0),0);
+  const totalP = D.vendors.reduce((a,v)=>a+(vendorPaidAmount(v.id)||0),0);
+  document.getElementById('vendors-meta').textContent = D.vendors.length+' vendor'+(D.vendors.length!==1?'s':'')+' · '+fmt(totalQ)+' quoted · '+fmt(totalP)+' paid';
+  document.getElementById('vendors-body').innerHTML = D.vendors.length ?
+    D.vendors.map(v=>{
+      const paid = vendorPaidAmount(v.id);
+      const owed = Math.max(0,(v.quote||0)-paid);
+      return `<tr class="row-click" onclick="editVendor(${v.id})">
+        <td style="font-weight:500;">${esc(v.name)}</td>
+        <td><span class="badge b-gray">${esc(v.category)}</span></td>
+        <td>${statusBadge(v.status)}</td>
+        <td>${fmtN(v.quote)}</td>
+        <td style="color:var(--green);font-weight:500;">${fmtN(paid)}</td>
+        <td style="color:${owed>0?'var(--amber)':'var(--green)'};">${fmtN(owed)}</td>
+        <td>${byPill(v.added_by)}</td>
+      </tr>`;
+    }).join('') :
+    `<tr><td colspan="7" class="empty-state">No vendors added yet</td></tr>`;
+}
+
+function editVendor(id){
+  const v = D.vendors.find(x=>x.id===id); if(!v) return;
+  const paid = vendorPaidAmount(id);
+  const exps = D.expenses.filter(e=>e.vendor_id===id);
+  const expRows = exps.length
+    ? exps.map(e=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text2);">${esc(e.description)}</span>
+        <span>${fmt(e.amount)}</span>
+      </div>`).join('')
+    : '<p style="font-size:12px;color:var(--text3);">No expenses linked yet</p>';
+
+  openModal('Edit vendor',`
+    <div class="mf"><label>Vendor name</label><input id="mv-name" type="text" value="${esc(v.name)}"></div>
+    <div class="mgrid">
+      <div class="mf"><label>Category</label><select id="mv-cat">${selOpts(CATS,v.category)}</select></div>
+      <div class="mf"><label>Status</label><select id="mv-status">${selOpts(VENDOR_STATUSES,v.status)}</select></div>
+      <div class="mf"><label>Quote (₦)</label><input id="mv-quote" type="number" value="${v.quote||0}"></div>
+      <div class="mf"><label>Contact</label><input id="mv-contact" type="text" value="${esc(v.contact||'')}"></div>
+    </div>
+    <div class="mf"><label>Notes</label><input id="mv-notes" type="text" value="${esc(v.notes||'')}"></div>
+    <div style="margin-top:14px;padding:12px;background:var(--bg);border-radius:var(--r);">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:500;margin-bottom:8px;">
+        <span>Linked expenses</span><span style="color:var(--green);">${fmt(paid)} paid</span>
+      </div>
+      ${expRows}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doDelete('wt_vendors',${id},'vendor','${esc(v.name)}')">Delete</button>
+      <button class="btn" onclick="saveVendor(${id})">Save changes</button>
+    </div>`);
+}
+
+async function saveVendor(id){
+  const orig = D.vendors.find(x=>x.id===id);
+  const payload = {
+    name:     document.getElementById('mv-name').value.trim(),
+    category: document.getElementById('mv-cat').value,
+    status:   document.getElementById('mv-status').value,
+    quote:    N(document.getElementById('mv-quote').value),
+    contact:  document.getElementById('mv-contact').value.trim()||null,
+    notes:    document.getElementById('mv-notes').value.trim()||null,
+  };
+  if(!payload.name) return alert('Vendor name is required.');
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_vendors').update(payload).eq('id',id);
+  if(error){ setSyncStatus('err','Save failed'); return; }
+  const changes=[];
+  if(orig.status!==payload.status) changes.push(`status → ${payload.status}`);
+  if(orig.quote!==payload.quote)   changes.push(`quote → ${fmt(payload.quote)}`);
+  await logActivity('edited','vendors',`Edited vendor "${payload.name}"${changes.length?' ('+changes.join(', ')+')':''}`);
+  closeModal(); loadAll();
+}
+
+async function addVendor(){
+  const name = document.getElementById('v-name').value.trim();
+  if(!name) return alert('Please enter a vendor name.');
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_vendors').insert({
+    name,
+    category: document.getElementById('v-cat').value,
+    status:   document.getElementById('v-status').value,
+    quote:    N(document.getElementById('v-quote').value),
+    contact:  document.getElementById('v-contact').value.trim()||null,
+    notes:    document.getElementById('v-notes').value.trim()||null,
+    added_by: currentUser,
+  });
+  if(error){ setSyncStatus('err','Save failed: '+error.message); return; }
+  await logActivity('added','vendors',`Added vendor: ${name}`);
+  ['v-name','v-quote','v-contact','v-notes'].forEach(i=>document.getElementById(i).value='');
+  loadAll();
+}
+
+// ─────────────────────────────────────────
+// EXPENSES
+// ─────────────────────────────────────────
+function renderExpenses(){
+  vendorSelect('e-vendor');
+  const cats = ['All',...new Set(D.expenses.map(e=>e.category))];
+  document.getElementById('exp-filters').innerHTML = cats.map(c=>
+    `<button class="chip ${expCatFilter===c?'on':''}" onclick="setExpFilter('${esc(c)}')">${esc(c)}</button>`).join('');
+
+  const rows = D.expenses.filter(e=>expCatFilter==='All'||e.category===expCatFilter);
+  const vendor = id => D.vendors.find(v=>v.id===id);
+
+  document.getElementById('expenses-body').innerHTML = rows.length ?
+    rows.map(e=>`<tr class="row-click" onclick="editExpense(${e.id})">
+      <td style="font-weight:500;">${esc(e.description)}</td>
+      <td><span class="badge b-gray">${esc(e.category)}</span></td>
+      <td style="color:var(--text2);">${vendor(e.vendor_id)?esc(vendor(e.vendor_id).name):'—'}</td>
+      <td style="font-weight:500;">${fmtN(e.amount)}</td>
+      <td style="color:var(--text2);">${esc(e.method||'—')}</td>
+      <td style="color:var(--text2);">${e.date||'—'}</td>
+      <td>${byPill(e.added_by)}</td>
+    </tr>`).join('') :
+    `<tr><td colspan="7" class="empty-state">No expenses logged yet</td></tr>`;
+}
+function setExpFilter(c){ expCatFilter=c; renderExpenses(); }
+
+function editExpense(id){
+  const e = D.expenses.find(x=>x.id===id); if(!e) return;
+  const v = D.vendors.find(x=>x.id===e.vendor_id);
+  openModal('Edit expense',`
+    <div class="mf"><label>Description</label><input id="me-desc" type="text" value="${esc(e.description)}"></div>
+    <div class="mgrid">
+      <div class="mf"><label>Category</label><select id="me-cat">${selOpts(CATS,e.category)}</select></div>
+      <div class="mf"><label>Vendor</label><select id="me-vendor">${D.vendors.map(v=>`<option value="${v.id}"${v.id===e.vendor_id?' selected':''}>${esc(v.name)}</option>`).join('')}</select></div>
+      <div class="mf"><label>Amount (₦)</label><input id="me-amount" type="number" value="${e.amount||0}"></div>
+      <div class="mf"><label>Payment method</label><select id="me-method">${selOpts(METHODS,e.method)}</select></div>
+      <div class="mf"><label>Date</label><input id="me-date" type="date" value="${e.date||''}"></div>
+    </div>
+    ${v?`<div style="font-size:12px;color:var(--text2);background:var(--bg);padding:10px;border-radius:var(--r);margin-top:4px;">This expense counts toward <strong>${esc(v.name)}</strong>'s paid amount.</div>`:''}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doDelete('wt_expenses',${id},'expense','${esc(e.description)}')">Delete</button>
+      <button class="btn" onclick="saveExpense(${id})">Save changes</button>
+    </div>`);
+}
+
+async function saveExpense(id){
+  const orig = D.expenses.find(x=>x.id===id);
+  const vendorId = parseInt(document.getElementById('me-vendor').value)||null;
+  const payload = {
+    description: document.getElementById('me-desc').value.trim(),
+    category:    document.getElementById('me-cat').value,
+    vendor_id:   vendorId,
+    amount:      N(document.getElementById('me-amount').value),
+    method:      document.getElementById('me-method').value,
+    date:        document.getElementById('me-date').value||null,
+  };
+  if(!payload.description) return alert('Please enter a description.');
+  if(!vendorId) return alert('Please select a vendor.');
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_expenses').update(payload).eq('id',id);
+  if(error){ setSyncStatus('err','Save failed'); return; }
+  const changes=[];
+  if(orig.amount!==payload.amount) changes.push(`amount ${fmt(orig.amount)} → ${fmt(payload.amount)}`);
+  if(orig.vendor_id!==payload.vendor_id){
+    const nv=D.vendors.find(x=>x.id===payload.vendor_id);
+    changes.push(`vendor → ${nv?nv.name:'unknown'}`);
+  }
+  await logActivity('edited','expenses',`Edited expense "${payload.description}"${changes.length?' ('+changes.join(', ')+')':''}`);
+  closeModal(); loadAll();
+}
+
+async function addExpense(){
+  const desc = document.getElementById('e-desc').value.trim();
+  const vendorId = parseInt(document.getElementById('e-vendor').value)||null;
+  const amount = N(document.getElementById('e-amount').value);
+  if(!desc)     return alert('Please enter a description.');
+  if(!vendorId) return alert('Please select a vendor. All expenses must be linked to a vendor.');
+  if(!amount)   return alert('Please enter an amount.');
+  setSyncStatus('busy','Saving…');
+  const vName = (D.vendors.find(v=>v.id===vendorId)||{}).name||'';
+  const {error} = await sb.from('wt_expenses').insert({
+    description: desc,
+    category:    document.getElementById('e-cat').value,
+    vendor_id:   vendorId,
+    amount,
+    method:      document.getElementById('e-method').value,
+    date:        document.getElementById('e-date').value||null,
+    added_by:    currentUser,
+  });
+  if(error){ setSyncStatus('err','Save failed: '+error.message); return; }
+  await logActivity('added','expenses',`Added expense: ${desc} — ${fmt(amount)} → ${vName}`);
+  ['e-desc','e-amount','e-date'].forEach(i=>document.getElementById(i).value='');
+  loadAll();
+}
+
+// ─────────────────────────────────────────
+// GIFTS
+// ─────────────────────────────────────────
+function renderGifts(){
+  const total = D.gifts.reduce((a,g)=>a+(g.amount||0),0);
+  const notAck = D.gifts.filter(g=>g.acknowledged!=='yes').length;
+  document.getElementById('gifts-meta').textContent = `${D.gifts.length} donor${D.gifts.length!==1?'s':''} · ${fmt(total)} total · ${notAck} unacknowledged`;
+  document.getElementById('gifts-body').innerHTML = D.gifts.length ?
+    D.gifts.map(g=>`<tr class="row-click" onclick="editGift(${g.id})">
+      <td style="font-weight:500;">${esc(g.name)}</td>
+      <td><span class="badge b-gray">${esc(g.relationship)}</span></td>
+      <td style="font-weight:500;color:var(--green);">${fmtN(g.amount)}</td>
+      <td>${esc(g.received_by||'—')}</td>
+      <td style="color:var(--text2);">${g.date||'—'}</td>
+      <td style="color:var(--text2);">${esc(g.channel||'—')}</td>
+      <td>${ackBadge(g.acknowledged)}</td>
+      <td>${byPill(g.added_by)}</td>
+    </tr>`).join('') :
+    `<tr><td colspan="8" class="empty-state">No gifts logged yet</td></tr>`;
+}
+
+function editGift(id){
+  const g = D.gifts.find(x=>x.id===id); if(!g) return;
+  openModal('Edit gift',`
+    <div class="mf"><label>Donor name</label><input id="mg-name" type="text" value="${esc(g.name)}"></div>
+    <div class="mgrid">
+      <div class="mf"><label>Relationship</label><select id="mg-rel">${selOpts(RELATIONSHIPS,g.relationship)}</select></div>
+      <div class="mf"><label>Amount (₦)</label><input id="mg-amount" type="number" value="${g.amount||0}"></div>
+      <div class="mf"><label>Received by</label><select id="mg-recv"><option${g.received_by==='Kelechi'?' selected':''}>Kelechi</option><option${g.received_by==='Nengi'?' selected':''}>Nengi</option></select></div>
+      <div class="mf"><label>Date</label><input id="mg-date" type="date" value="${g.date||''}"></div>
+      <div class="mf"><label>Channel</label><select id="mg-channel">${selOpts(CHANNELS,g.channel)}</select></div>
+      <div class="mf"><label>Acknowledged</label><select id="mg-ack"><option value="no"${g.acknowledged!=='yes'?' selected':''}>No</option><option value="yes"${g.acknowledged==='yes'?' selected':''}>Yes</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doDelete('wt_gifts',${id},'gift','from ${esc(g.name)}')">Delete</button>
+      <button class="btn" onclick="saveGift(${id})">Save changes</button>
+    </div>`);
+}
+
+async function saveGift(id){
+  const orig = D.gifts.find(x=>x.id===id);
+  const payload = {
+    name:         document.getElementById('mg-name').value.trim(),
+    relationship: document.getElementById('mg-rel').value,
+    amount:       N(document.getElementById('mg-amount').value),
+    received_by:  document.getElementById('mg-recv').value,
+    date:         document.getElementById('mg-date').value||null,
+    channel:      document.getElementById('mg-channel').value,
+    acknowledged: document.getElementById('mg-ack').value,
+  };
+  if(!payload.name) return alert('Please enter a name.');
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_gifts').update(payload).eq('id',id);
+  if(error){ setSyncStatus('err','Save failed'); return; }
+  const changes=[];
+  if(orig.amount!==payload.amount) changes.push(`amount ${fmt(orig.amount)} → ${fmt(payload.amount)}`);
+  if(orig.acknowledged!==payload.acknowledged) changes.push(`acknowledged → ${payload.acknowledged}`);
+  await logActivity('edited','gifts',`Edited gift from ${payload.name}${changes.length?' ('+changes.join(', ')+')':''}`);
+  closeModal(); loadAll();
+}
+
+async function addGift(){
+  const name = document.getElementById('g-name').value.trim();
+  const amount = N(document.getElementById('g-amount').value);
+  if(!name)   return alert('Please enter the donor\'s name.');
+  if(!amount) return alert('Please enter an amount.');
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_gifts').insert({
+    name,
+    relationship: document.getElementById('g-rel').value,
+    amount,
+    received_by:  document.getElementById('g-recv').value,
+    date:         document.getElementById('g-date').value||null,
+    channel:      document.getElementById('g-channel').value,
+    acknowledged: document.getElementById('g-ack').value,
+    added_by:     currentUser,
+  });
+  if(error){ setSyncStatus('err','Save failed: '+error.message); return; }
+  await logActivity('added','gifts',`Logged gift from ${name}: ${fmt(amount)}`);
+  ['g-name','g-amount','g-date'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('g-ack').value='no';
+  loadAll();
+}
+
+// ─────────────────────────────────────────
+// CONTRIBUTIONS
+// ─────────────────────────────────────────
+function renderContributions(){
+  const total = D.contributions.reduce((a,c)=>a+(c.amount||0),0);
+  document.getElementById('contrib-meta').textContent = D.contributions.length+' entr'+(D.contributions.length!==1?'ies':'y')+' · '+fmt(total)+' total';
+  document.getElementById('contrib-body').innerHTML = D.contributions.length ?
+    D.contributions.map(c=>`<tr class="row-click" onclick="editContribution(${c.id})">
+      <td style="color:var(--text2);">${esc(c.notes||'—')}</td>
+      <td><span class="badge" style="background:${uColor(c.from_person)}22;color:${uColor(c.from_person)};">${esc(c.from_person)}</span></td>
+      <td style="font-weight:500;color:var(--green);">${fmtN(c.amount)}</td>
+      <td style="color:var(--text2);">${c.date||'—'}</td>
+      <td>${byPill(c.added_by)}</td>
+    </tr>`).join('') :
+    `<tr><td colspan="5" class="empty-state">No contributions logged yet</td></tr>`;
+}
+
+function editContribution(id){
+  const c = D.contributions.find(x=>x.id===id); if(!c) return;
+  openModal('Edit contribution',`
+    <div class="mf"><label>Notes</label><input id="mc-notes" type="text" value="${esc(c.notes||'')}"></div>
+    <div class="mgrid">
+      <div class="mf"><label>From</label><select id="mc-from"><option${c.from_person==='Kelechi'?' selected':''}>Kelechi</option><option${c.from_person==='Nengi'?' selected':''}>Nengi</option></select></div>
+      <div class="mf"><label>Amount (₦)</label><input id="mc-amount" type="number" value="${c.amount||0}"></div>
+      <div class="mf"><label>Date</label><input id="mc-date" type="date" value="${c.date||''}"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="doDelete('wt_contributions',${id},'contribution','${esc(c.notes||'entry')}')">Delete</button>
+      <button class="btn" onclick="saveContribution(${id})">Save changes</button>
+    </div>`);
+}
+
+async function saveContribution(id){
+  const orig = D.contributions.find(x=>x.id===id);
+  const payload = {
+    notes:       document.getElementById('mc-notes').value.trim()||null,
+    from_person: document.getElementById('mc-from').value,
+    amount:      N(document.getElementById('mc-amount').value),
+    date:        document.getElementById('mc-date').value||null,
+  };
+  setSyncStatus('busy','Saving…');
+  const {error} = await sb.from('wt_contributions').update(payload).eq('id',id);
+  if(error){ setSyncStatus('err','Save failed'); return; }
+  const changes=[];
+  if(orig.amount!==payload.amount) changes.push(`amount ${fmt(orig.amount)} → ${fmt(payload.amount)}`);
+  await logActivity('edited','contributions',`Edited contribution from ${payload.from_person}${changes.length?' ('+changes.join(', ')+')':''}`);
+  closeModal(); loadAll();
+}
+
+async function addContribution(){
+  const amount = N(document.getElementById('c-amount').value);
+  if(!amount) return alert('Please enter an amount.');
+  setSyncStatus('busy','Saving…');
+  const from = document.getElementById('c-from').value;
+  const {error} = await sb.from('wt_contributions').insert({
+    notes:       document.getElementById('c-notes').value.trim()||null,
+    from_person: from,
+    amount,
+    date:        document.getElementById('c-date').value||null,
+    added_by:    currentUser,
+  });
+  if(error){ setSyncStatus('err','Save failed: '+error.message); return; }
+  await logActivity('added','contributions',`${from} contributed ${fmt(amount)}`);
+  ['c-notes','c-amount','c-date'].forEach(i=>document.getElementById(i).value='');
+  loadAll();
+}
+
+// ─────────────────────────────────────────
+// ACTIVITY LOG
+// ─────────────────────────────────────────
+function renderActivity(){
+  const actors = ['All',...new Set(D.activity.map(a=>a.actor))];
+  document.getElementById('act-filters').innerHTML = actors.map(a=>
+    `<button class="chip ${actUserFilter===a?'on':''}" onclick="setActFilter('${esc(a)}')">${esc(a)}</button>`).join('');
+
+  const items = D.activity.filter(a=>actUserFilter==='All'||a.actor===actUserFilter);
+  const tblLabel = {vendors:'Vendors',expenses:'Expenses',gifts:'Gifts',contributions:'Contributions'};
+
+  document.getElementById('act-content').innerHTML = items.length ?
+    items.map(a=>`
+      <div class="act-item">
+        <div class="act-av" style="background:${uColor(a.actor)};">${uInit(a.actor)}</div>
+        <div>
+          <div class="act-text"><strong>${esc(a.actor)}</strong> — ${esc(a.description)}${a.table_name?`<span class="act-tbl">${tblLabel[a.table_name]||a.table_name}</span>`:''}</div>
+          <div class="act-time">${fmtDate(a.created_at)}</div>
+        </div>
+      </div>`).join('') :
+    '<div class="empty-state">No activity yet</div>';
+}
+function setActFilter(u){ actUserFilter=u; renderActivity(); }
+
+// ─────────────────────────────────────────
+// DELETE
+// ─────────────────────────────────────────
+function doDelete(table, id, type, label){
+  closeModal();
+  setTimeout(()=>{
+    document.getElementById('confirm-msg').textContent = `"${label}" will be removed. It will still appear in the activity log.`;
+    confirmCb = async ()=>{
+      setSyncStatus('busy','Deleting…');
+      const {error} = await sb.from(table).delete().eq('id', Number(id));
+      if(error){
+        setSyncStatus('err','Delete failed');
+        alert('Could not delete: '+error.message);
+        return;
+      }
+      await logActivity('deleted', table.replace('wt_',''), `Deleted ${type}: ${label}`);
+      closeConfirm();
+      loadAll();
+    };
+    document.getElementById('confirm-overlay').classList.add('open');
+  }, 80);
+}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  confirmCb = null;
+}
+document.getElementById('confirm-ok').onclick = ()=>{ if(confirmCb) confirmCb(); };
+
+// ─────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────
+function openModal(title, body){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+function setUser(name){
+  currentUser = name;
+  localStorage.setItem('wb_user', name);
+  document.getElementById('who-overlay').classList.remove('open');
+  showUserBadge(name);
+  loadAll();
+  subscribeRealtime();
+}
+function switchUser(){
+  localStorage.removeItem('wb_user');
+  currentUser = null;
+  document.getElementById('user-badge').style.display='none';
+  document.getElementById('who-overlay').classList.add('open');
+}
+function showUserBadge(name){
+  const av = document.getElementById('uav-top');
+  av.textContent = uInit(name);
+  av.style.background = uColor(name);
+  document.getElementById('uname-top').textContent = name;
+  document.getElementById('user-badge').style.display='flex';
+}
+
+// ─────────────────────────────────────────
+// SYNC UI
+// ─────────────────────────────────────────
+function setSyncStatus(s, t){
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + (s==='ok'?'ok':s==='busy'?'busy':'err');
+  document.getElementById('sync-text').textContent = t;
+}
+
+// ─────────────────────────────────────────
+// ACTIVITY LOG
+// ─────────────────────────────────────────
+async function logActivity(action, table_name, description){
+  if(!sb||!currentUser) return;
+  await sb.from('wt_activity').insert({ actor:currentUser, action, table_name, description });
+}
+
+// ─────────────────────────────────────────
+// WEDDING INFO
+// ─────────────────────────────────────────
+function renderWeddingInfo(){
+  const date    = localStorage.getItem('wb_wedding_date');
+  const venue   = localStorage.getItem('wb_wedding_venue');
+  const guests  = localStorage.getItem('wb_wedding_guests');
+  const theme   = localStorage.getItem('wb_wedding_theme');
+
+  const display = document.getElementById('wedding-info-display');
+  const empty   = document.getElementById('info-empty');
+
+  if(!date && !venue && !guests && !theme){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let days = null;
+  if(date){
+    days = Math.ceil((new Date(date) - new Date()) / 86400000);
+  }
+
+  display.innerHTML = [
+    date    ? `<div class="info-item"><div class="info-label">Date</div><div class="info-val">${new Date(date).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</div>${days!==null?`<div class="info-sub">${days>0?days+' days away':'Today!'}</div>`:''}</div>` : '',
+    venue   ? `<div class="info-item"><div class="info-label">Venue</div><div class="info-val">${esc(venue)}</div></div>` : '',
+    guests  ? `<div class="info-item"><div class="info-label">Guest count</div><div class="info-val">${parseInt(guests).toLocaleString('en-NG')}</div></div>` : '',
+    theme   ? `<div class="info-item"><div class="info-label">Theme</div><div class="info-val">${esc(theme)}</div></div>` : '',
+  ].join('');
+
+  // pre-fill edit form
+  if(date)   document.getElementById('wi-date').value   = date;
+  if(venue)  document.getElementById('wi-venue').value  = venue;
+  if(guests) document.getElementById('wi-guests').value = guests;
+  if(theme)  document.getElementById('wi-theme').value  = theme;
+}
+
+function saveWeddingInfo(){
+  const date   = document.getElementById('wi-date').value;
+  const venue  = document.getElementById('wi-venue').value.trim();
+  const guests = document.getElementById('wi-guests').value;
+  const theme  = document.getElementById('wi-theme').value.trim();
+
+  if(date)   localStorage.setItem('wb_wedding_date',   date);   else localStorage.removeItem('wb_wedding_date');
+  if(venue)  localStorage.setItem('wb_wedding_venue',  venue);  else localStorage.removeItem('wb_wedding_venue');
+  if(guests) localStorage.setItem('wb_wedding_guests', guests); else localStorage.removeItem('wb_wedding_guests');
+  if(theme)  localStorage.setItem('wb_wedding_theme',  theme);  else localStorage.removeItem('wb_wedding_theme');
+
+  document.getElementById('wedding-info-form') && (document.getElementById('wedding-info-form').style.display = 'none');
+  renderWeddingInfo();
+  renderHero();
+}
+
+// ─────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
